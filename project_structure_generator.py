@@ -2,22 +2,8 @@ import os  # Import os module for interacting with the operating system.
 import re  # Import re module for regular expressions.  
 import fnmatch  # Import fnmatch module for wildcard matching.  
 
-# The purpose of this script is to generate a structured and formatted representation of a project's directory and file hierarchy.  
-# This script is particularly useful for developers who need to document and understand the layout of a large project. It ensures that  
-# directories and files are presented in a readable and organized manner, with special handling to ignore specific directories,  
-# define which files to include in the output, and group files with similar naming patterns.  
-#   
-# The pattern logic allows listing only one of each of the values defined as a pattern. For example, if you have 10 CSV files in a folder  
-# that increment in value, instead of listing all of them (which would make the output very long), it will list just one for each folder.  
-# The output will not repeat or output folders that have the same depth and final folder name.  
-#  
-# Directories in ignore_dirs can have wildcard patterns which will be correctly interpreted and matched.  
-# For example, '*.cache' will ignore any directory ending with '.cache'.  
-# Another example, '.*' will ignore all hidden directories starting with a '.'.  
-
-# Function: generate_project_structure; Generates and saves a structured representation of the project directory.  
-def generate_project_structure(project_dir, ignore_dirs, extensions_to_include, patterns, special_dir_patterns, output_file='project_structure.txt'):  
-    tree = ["project_root/"]  # Initialize the tree representation with the root directory.  
+def generate_project_structure(project_dir, ignore_dirs, extensions_to_include, patterns, special_dir_patterns, output_file='project_structure.txt', return_folders_only=False, max_depth=None):  
+    tree = [os.path.basename(os.path.normpath(project_dir)) + "/"]  # Initialize the tree representation with the root directory.  
 
     # Compile all patterns from the provided list.  
     compiled_patterns = [re.compile(pattern_str) for pattern_str in patterns]  
@@ -34,6 +20,10 @@ def generate_project_structure(project_dir, ignore_dirs, extensions_to_include, 
 
     # Walk through the directory tree.  
     for dirpath, dirnames, filenames in os.walk(project_dir, topdown=True):  
+        depth = os.path.relpath(dirpath, project_dir).count(os.sep)  # Calculate the directory depth.  
+        if max_depth is not None and depth >= max_depth:  
+            continue  # Skip processing if the current depth exceeds the maximum allowed.  
+
         dirnames[:] = [d for d in dirnames if not should_ignore_directory(d) and not is_special_directory(d)]  
         dirnames.sort()  # Sort the directory names.  
 
@@ -43,15 +33,20 @@ def generate_project_structure(project_dir, ignore_dirs, extensions_to_include, 
         if should_ignore_directory(current_dir_name):  
             continue  
 
-        depth = relative_path.count(os.sep)  # Calculate the directory depth.  
         indent = '│   ' * depth  # Create the indent for the current depth.  
         subindent = '│   ' * (depth + 1)  # Create the subindent for subdirectories.  
 
+        if return_folders_only:  # Check if only folder names should be returned.  
+            # Add directory line  
+            if relative_path != '.':  
+                tree.append(f"{indent}├── {current_dir_name}/")  # Add the directory to the tree.  
+            continue  # Skip the rest of the logic for files if we only want folders.  
+
         # Identify unique files based on the patterns.  
         pattern_dict = {}  # Dictionary to hold the first and last file matching each pattern.  
-        files_of_interest = set()  
+        files_of_interest = set()  # Set to hold files that match the patterns.  
 
-        for file in filenames:  
+        for file in filenames:  # Iterate through files in the current directory.  
             if file.endswith(extensions_to_include) and not file.startswith('.'):  
                 unique_found = False  
                 for pattern in compiled_patterns:  
@@ -67,27 +62,27 @@ def generate_project_structure(project_dir, ignore_dirs, extensions_to_include, 
                 if not unique_found:  
                     files_of_interest.add(file)  
 
-        for files in pattern_dict.values():  
+        for files in pattern_dict.values():  # Add identified files to interest set.  
             files_of_interest.add(files["first"])  
             files_of_interest.add(files["last"])  
 
-        # Add directory line  
+        # Add directory line for folder to tree.  
         if relative_path != '.':  
-            tree.append(f"{indent}├── {current_dir_name}/")  # Add the directory to the tree.  
+            tree.append(f"{indent}├── {current_dir_name}/")  
 
         # Append files of interest with correct connector  
-        sorted_files_of_interest = sorted(files_of_interest)  
-        for i, filename in enumerate(sorted_files_of_interest):  # Iterate and sort files of interest.  
-            is_last_file = (i == len(sorted_files_of_interest) - 1)  # Check if this is the last file.  
-            has_subdirectories = bool(dirnames)  # Check if there are subdirectories.  
-            connector = "└──" if is_last_file and not has_subdirectories else "├──"  # Determine the connector.  
-            tree.append(f"{subindent}{connector} {filename}")  # Add the file to the tree.  
+        sorted_files_of_interest = sorted(files_of_interest)  # Sort files of interest.  
+        for i, filename in enumerate(sorted_files_of_interest):  # Add files to tree.  
+            is_last_file = (i == len(sorted_files_of_interest) - 1)  # Check if last file.  
+            has_subdirectories = bool(dirnames)  # Check for subdirectories.  
+            connector = "└──" if is_last_file and not has_subdirectories else "├──"  
+            tree.append(f"{subindent}{connector} {filename}")  
 
-        # Add break line only if there are no subdirectories and the last file is a Python file.  
+        # Add break line if necessary.  
         if not dirnames and sorted_files_of_interest and sorted_files_of_interest[-1].endswith('.py'):  
-            tree.append(indent + '│')  # Add the break line.  
+            tree.append(indent + '│')  # Add break line.  
 
-    # Remove the trailing connector lines if they are at the end of the tree.  
+    # Clean up trailing connector lines.  
     while tree and (tree[-1].strip() == "│" or tree[-1].strip() == ""):  
         tree.pop()  # Remove trailing connector lines.  
 
@@ -98,13 +93,16 @@ def generate_project_structure(project_dir, ignore_dirs, extensions_to_include, 
 
 # Entry point of the script.  
 if __name__ == '__main__':  
+    # Define the root directory of the project.  
     project_dir = '/Volumes/Other/'  # Define th root directory of the project.
-    output_path = 'project_structure.txt'  # Define the output file path.  
-
+    output_path = '/Volumes/Other/project_structure.txt'  # Define the output file path.  
+    return_folders_only = False
+    max_depth = 2
     # List of directory names to ignore.  
     ignore_dirs = ['node_modules', 'lib', 'libs', '.git', 'venv', 'chrome.app', '.vscode', '.*']  
+    # Define the file extensions of interest.  
     extensions_to_include = ('.py', '.json', '.php', '.csv')  # Define the file extensions of interest.  
     patterns = [r'links_(\d+)-(\d+)\.csv', r'part_\d+\.csv', r'links_\d+\.csv', r'(.*)_part_(\d+)\.csv']  # Define the patterns for identifying unique files.  
     special_dir_patterns = [r'run_\d+']  # Define patterns for special directories.  
 
-    generate_project_structure(project_dir, ignore_dirs, extensions_to_include, patterns, special_dir_patterns, output_path)  # Generate the project structure.
+    generate_project_structure(project_dir, ignore_dirs, extensions_to_include, patterns, special_dir_patterns, output_path, return_folders_only, max_depth)  # Generate the project structure.
