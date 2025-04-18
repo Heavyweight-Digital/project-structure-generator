@@ -1,0 +1,24 @@
+Other/  
+│   ├── project_structure_generator.py  
+├── config/  
+│   ├── update_files.py  
+│   ├── initial_setup/  
+│   │   └── structure.py  
+│   │  
+├── data/  
+│   ├── processed_files/  
+│   │   ├── Categories.json  
+│   │   ├── Combined_File.json  
+├── src/  
+│   ├── data_fetch/  
+│   │   └── fetch_feeds.py  
+│   │  
+│   ├── data_processing/  
+│   │   ├── combine_feeds.py  
+│   │   └── populate_reference_files.py  
+├── tests/  
+│   ├── test_combine_feeds.py  
+│   └── test_integration.py  
+│  
+├── woopoint/  
+│   └── woopoint.php
