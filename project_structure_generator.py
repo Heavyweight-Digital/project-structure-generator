@@ -212,14 +212,13 @@ def generate_project_structure(project_dir, ignore_dirs, extensions_to_include, 
                     for lang, config in language_patterns.items():
                         if lang in languages and any(file.endswith(ext) for ext in config['extensions']):
                             data = extract_functions(file_path, lang)
-                            if data['functions'] or data['classes']:
-                                relative_file_path = os.path.join(relative_path, file) if relative_path != '.' else file
-                                functions_data.append({
-                                    'file': relative_file_path,
-                                    'language': lang,
-                                    'functions': data['functions'],
-                                    'classes': data['classes']
-                                })
+                            relative_file_path = os.path.join(relative_path, file) if relative_path != '.' else file
+                            functions_data.append({
+                                'file': relative_file_path,
+                                'language': lang,
+                                'functions': data['functions'],
+                                'classes': data['classes']
+                            })
 
         for files in pattern_dict.values():  # Add identified files to interest set.
             files_of_interest.add(files["first"])
@@ -254,11 +253,14 @@ def generate_project_structure(project_dir, ignore_dirs, extensions_to_include, 
     with open(functions_file, 'w', encoding='utf-8') as f:
         for entry in functions_data:
             f.write(f"File: {entry['file']} (Language: {entry['language'].capitalize()})\n")
-
-                        
+            
             total_classes = len(entry['classes'])
             total_methods = sum(len(cls['functions']) for cls in entry['classes'])
             total_functions = len(entry['functions'])
+
+            if total_classes == 0 and total_methods == 0 and total_functions == 0:
+                f.write("  No functions or classes found\n\n")
+                continue
 
             if total_classes > 0:
                 f.write(f"  Total Classes: {total_classes}\n")
