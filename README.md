@@ -10,7 +10,7 @@ The purpose of this script is to generate a structured and formatted representat
 - Special handling is provided to ignore specific directories and files.
 - Users can define which files to include in the output.
 - Files with similar naming patterns are grouped together.
-- Function and class information is extracted and documented.
+- Function and class information, including file descriptions, is extracted and documented.
 
 ### Pattern Logic
 
@@ -25,22 +25,33 @@ Directories and files in the ignore lists can have wildcard patterns which will 
 
 ## Features
 
-- Ignores specified directories and files.
-- Groups files with similar naming patterns.
-- Lists directories before files within each directory.
+- Ignores specified directories and files using wildcard patterns.
+- Groups files with similar naming patterns for concise output.
+- Lists directories before files within each directory for clarity.
 - Handles special directory naming patterns (e.g., `run_1`, `run_2`).
 - Customizable file extensions, file patterns, and languages for processing.
-- Wildcard patterns for directories and files.
-- Option to output only folder names for a simplified view.
-- Control over the depth level of the output to limit how deep the directory structure is represented.
+- Option to output only folder names for a simplified directory view.
+- Control over the depth level of the output to limit directory structure representation.
 - Uses the defined project directory name as the base in the output structure.
-- Extracts functions and classes from Python, PHP, and JavaScript files, with detailed output.
-- Generates multiple output files: project structure, function/class details, and a combined structure with functions.
-- Selective output generation for structure, functions, or combined files.
+- Extracts functions and classes from Python (`.py`), PHP (`.php`), and JavaScript (`.js`) files.
+- Captures function names, class names, methods, associated comments, and line numbers.
+- Extracts file descriptions for PHP and JavaScript files using predefined regex patterns.
+- Generates multiple output files:
+  - `project_structure.txt`: Directory and file hierarchy.
+  - `functions.txt`: Function, class, and file description details.
+  - `combined_structure.txt`: Combined structure with function, class, and file description data.
+- Selective output generation using boolean flags (`EXPORT_STRUCTURE`, `EXPORT_FUNCTIONS`, `EXPORT_COMBINED`).
+- Dynamic project directory configuration based on the script's location.
+- Automatically creates the documentation directory if it does not exist.
+- Supports additional file extensions (e.g., `.php`, `.css`) for inclusion.
+- Language-specific regex patterns for accurate function and class extraction.
+- Validates specified languages and warns about unsupported ones.
+- Processes files with UTF-8 encoding and handles unreadable files gracefully.
+- Improved PHP handling to distinguish between standalone functions and class methods.
 
 ## Configuration
 
-1. Define the project directory by updating `PROJECT_DIR`.
+1. Define the project directory automatically using `PROJECT_DIR` (set to the script's directory).
 2. Specify the documentation directory with `DOCUMENTATION_DIR` (used for output files).
 3. Set output file paths:
    - `OUTPUT_FILE` for the project structure (`project_structure.txt`).
@@ -53,10 +64,10 @@ Directories and files in the ignore lists can have wildcard patterns which will 
 5. Customize the following variables:
    - `IGNORE_DIRS`: List of directories or patterns to ignore.
    - `IGNORE_FILES`: List of files or patterns to ignore.
-   - `EXTENSIONS_TO_INCLUDE`: File extensions to include.
+   - `EXTENSIONS_TO_INCLUDE`: File extensions to include (e.g., `.js`, `.php`, `.css`).
    - `PATTERNS`: Patterns for grouping similar files.
    - `SPECIAL_DIR_PATTERNS`: Patterns for special directories.
-   - `LANGUAGES`: Languages to process for function/class extraction.
+   - `LANGUAGES`: Languages to process for function/class extraction (e.g., `python`, `php`, `javascript`).
 6. Use the `RETURN_FOLDERS_ONLY` parameter to output only folder names.
 7. Set `MAX_DEPTH` to control how deep the output structure should go.
 8. Set `INCLUDE_ALL_FILES` to include all files or only those matching specified extensions.
@@ -99,6 +110,7 @@ project_root/
 ```
 File: src/data_fetch/fetch_feeds.py (python)  
 Total Functions: 2  
+File Description: Script for fetching and parsing external API data  
   Function: fetch_data (Line 10)  
   - Function Description: Fetches data from external API  
   Function: parse_response (Line 25)  
@@ -107,6 +119,7 @@ Total Functions: 2
 File: woopoint/woopoint.php (php)  
 Total Classes: 1  
 Total Methods: 3  
+File Description: Main class for WooCommerce point management  
   Class: WooPoint  
     Function: __construct  
     - Function Description: Initializes the WooPoint class  
@@ -148,6 +161,7 @@ Project Structure:
 File Structure:  
   File: src/data_fetch/fetch_feeds.py (python)  
   Total Functions: 2  
+  File Description: Script for fetching and parsing external API data  
     Function: fetch_data (Line 10)  
     - Function Description: Fetches data from external API  
     Function: parse_response (Line 25)  
@@ -156,6 +170,7 @@ File Structure:
   File: woopoint/woopoint.php (php)  
   Total Classes: 1  
   Total Methods: 3  
+  File Description: Main class for WooCommerce point management  
     Class: WooPoint  
       Function: __construct  
       - Function Description: Initializes the WooPoint class  

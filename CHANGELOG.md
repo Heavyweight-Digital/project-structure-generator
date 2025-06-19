@@ -1,5 +1,16 @@
 # Changelog  
 
+## Version 1.5  
+
+- Added new features:  
+  - Dynamic `PROJECT_DIR` configuration using `os.path.dirname(os.path.abspath(__file__))` to set the root directory to the script's location.  
+  - Added file description extraction for PHP and JavaScript files using `file_description_regex` patterns.  
+  - Included file descriptions in `functions.txt` and `combined_structure.txt` output files.  
+  - Ensures `DOCUMENTATION_DIR` is created if it does not exist before saving the combined output file.  
+- Improved documentation:  
+  - Added inline comments to helper functions for better clarity and maintainability.  
+  - Updated function descriptions to follow a consistent format.  
+
 ## Version 1.4  
 
 - Added new features:  
