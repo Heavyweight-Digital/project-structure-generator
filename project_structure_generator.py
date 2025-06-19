@@ -3,7 +3,7 @@ import re  # Import re module for regular expressions.
 import fnmatch  # Import fnmatch module for wildcard matching.
 
 # Configuration settings
-PROJECT_DIR = './'  # Root directory of the project.
+PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))  # Root directory of the project (current directory of this file).
 DOCUMENTATION_DIR = f"{PROJECT_DIR}/docs"  # Documentation directory (legacy).
 OUTPUT_FILE = f"{DOCUMENTATION_DIR}/project_structure.txt"  # Output file path for project structure (legacy).
 FUNCTIONS_FILE = f"{DOCUMENTATION_DIR}/functions.txt"  # Output file path for functions (legacy).
@@ -16,13 +16,13 @@ INCLUDE_ALL_FILES = False  # If True, include all files regardless of extensions
 MAX_DEPTH = 18  # Maximum depth for directory traversal.
 IGNORE_DIRS = ['node_modules', 'lib', 'libs', 'DataTables', '.git', 'venv', 'chrome.app', '.vscode']  # Directory names or patterns to ignore.
 IGNORE_FILES = ['README.md', 'CHANGELOG.md', '*.txt']  # File names or patterns to ignore.
-EXTENSIONS_TO_INCLUDE = ('.js',)  # File extensions to include in the output.
+EXTENSIONS_TO_INCLUDE = ('.js','.php', '.css')  # File extensions to include in the output.
 PATTERNS = [r'links_(\d+)-(\d+)\.csv', r'part_\d+\.csv', r'links_\d+\.csv', r'(.*)_part_(\d+)\.csv']  # Patterns for identifying unique files.
 SPECIAL_DIR_PATTERNS = [r'run_\d+']  # Patterns for special directories.
 LANGUAGES = ['python', 'php', 'javascript']  # Languages to process for function and class extraction.
 
 def generate_project_structure(project_dir,ignore_dirs,ignore_files,extensions_to_include,patterns,special_dir_patterns,languages,output_file,functions_file,combined_file,export_structure,export_functions,export_combined,return_folders_only,max_depth,include_all_files):
-
+    ### Generate the project structure, extract functions/classes, and save to specified output files.
     tree = [os.path.basename(os.path.normpath(project_dir)) + "/"]  # Initialize the tree representation with the root directory.
     functions_data = []  # List to store function and class information for functions.txt
 
@@ -44,11 +44,13 @@ def generate_project_structure(project_dir,ignore_dirs,ignore_files,extensions_t
             'class_regex': r'(?:^|\n)(?:[ \t]*\/\*\*.*?\*\/[ \t]*\n)?[ \t]*(?:abstract\s+)?class\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*(?:extends\s+[a-zA-Z_][a-zA-Z0-9_]*\s*)?(?:implements\s+[a-zA-Z_][a-zA-Z0-9_]*(?:\s*,\s*[a-zA-Z_][a-zA-Z0-9_]*)*\s*)?{',
             'function_regex': r'(?:^|\n)[ \t]*(?:public|private|protected)?\s*(?:static\s+)?function\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\([^)]*\)\s*(?::\s*[a-zA-Z_][a-zA-Z0-9_]*(?:\|\s*[a-zA-Z_][a-zA-Z0-9_]*)*\s*)?{\s*(?:[ \t]*\/\*\*\*[\s\S]*?\*\*\*[ \t]*\n)?',
             'comment_regex': r'function\s+[a-zA-Z_][a-zA-Z0-9_]*\s*\([^)]*\)\s*\{\s*(\/\*\*\*[\s\S]*?\*\*\*\/)',
+            'file_description_regex': r'<\?php\s*\n\/\*\*\s*\n\s*\*\s*Description:\s*(.*?)\s*\n\s*\*\s*File:.*?\*\/',
         },
         'javascript': {
             'extensions': ('.js',),
             'function_regex': r'(?:^|\n)(?:[ \t]*//.*\n|[ \t]*\/\*[^*]*\*\/[ \t]*\n)*[ \t]*(?:function\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\([^)]*\)|([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*function\s*\([^)]*\)|([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*\([^)]*\)\s*=>)\s*{',
-            'comment_regex': r'((?:^[ \t]*//.*\n|[ \t]*\/\*[^*]*\*\/[ \t]*\n)*)[ \t]*(?:function\s+[a-zA-Z_][a-zA-Z0-9_]*\s*\([^)]*\)|[a-zA-Z_][a-zA-Z0-9_]*\s*=\s*function\s*\([^)]*\)|[a-zA-Z_][a-zA-Z0-9_]*\s*=\s*\([^)]*\)\s*=>)\s*{',
+            'comment_regex': r'function\s+[a-zA-Z_][a-zA-Z0-9_]*\s*\([^)]*\)\s*\{\s*(\/\*\*\*[\s\S]*?\*\*\*\/)',
+            'file_description_regex': r'\/\*\*\s*\n\s*\*[^\n]*\n\s*\*\s*File:.*?\n\s*\*\s*@version.*?\n\s*\*\s*@description\s*(.*?)\s*\n\s*\*\/',
         }
     }
 
@@ -65,18 +67,22 @@ def generate_project_structure(project_dir,ignore_dirs,ignore_files,extensions_t
 
     # Helper function to check if a directory matches any special pattern.
     def is_special_directory(directory):
+        ### Check if the directory matches any special pattern.
         return any(re.match(pattern, directory) for pattern in compiled_special_patterns)
 
     # Helper function to check if a directory should be ignored based on ignore_patterns.
     def should_ignore_directory(directory):
+        ### Check if the directory should be ignored based on patterns.
         return any(pattern.match(directory) for pattern in compiled_ignore_dir_patterns)
 
     # Helper function to check if a file should be ignored based on ignore_file_patterns.
     def should_ignore_file(file):
+        ### Check if the file should be ignored based on patterns.
         return any(pattern.match(file) for pattern in compiled_ignore_file_patterns)
 
     # Helper function to find the end of a class (matching braces)
     def find_class_end(content, start_pos):
+        ### Find the end of a class by matching braces.
         brace_count = 1
         pos = start_pos
         while pos < len(content) and brace_count > 0:
@@ -89,18 +95,27 @@ def generate_project_structure(project_dir,ignore_dirs,ignore_files,extensions_t
 
     # Helper function to extract functions and classes from a file
     def extract_functions(file_path, language):
+        ### Extract functions, classes, and file descriptions from a file based on the specified language.
         if language not in language_patterns:
-            return {'functions': [], 'classes': []}
+            return {'functions': [], 'classes': [], 'file_description': ''}
+
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
         except (IOError, UnicodeDecodeError):
             print(f"Warning: Could not read file '{file_path}'")
-            return {'functions': [], 'classes': []}
+            return {'functions': [], 'classes': [], 'file_description': ''}
 
         functions = []
         classes = []
+        file_description = ''
         patterns = language_patterns[language]
+
+        # Extract file description for PHP or JavaScript files
+        if language in ['php', 'javascript']:
+            description_match = re.search(patterns['file_description_regex'], content, re.DOTALL)
+            if description_match:
+                file_description = description_match.group(1).strip()
 
         if language == 'php':
             # Extract classes
@@ -191,7 +206,7 @@ def generate_project_structure(project_dir,ignore_dirs,ignore_files,extensions_t
                     'line': line_number
                 })
 
-        return {'functions': functions, 'classes': classes}
+        return {'functions': functions, 'classes': classes, 'file_description': file_description}
 
     # Walk through the directory tree.
     for dirpath, dirnames, filenames in os.walk(project_dir, topdown=True):
@@ -247,7 +262,8 @@ def generate_project_structure(project_dir,ignore_dirs,ignore_files,extensions_t
                                 'file': relative_file_path,
                                 'language': lang,
                                 'functions': data['functions'],
-                                'classes': data['classes']
+                                'classes': data['classes'],
+                                'file_description': data['file_description']
                             })
 
         for files in pattern_dict.values():  # Add identified files to interest set.
@@ -293,13 +309,13 @@ def generate_project_structure(project_dir,ignore_dirs,ignore_files,extensions_t
                 elif entry['language'] == 'javascript':
                     language = 'javascript'
 
-                f.write(f"File: {entry['file']} ({language})")
+                f.write(f"File: {entry['file']} ({language})\n")
                 total_classes = len(entry['classes'])
                 total_methods = sum(len(cls['functions']) for cls in entry['classes'])
                 total_functions = len(entry['functions'])
 
-                if total_classes == 0 and total_methods == 0 and total_functions == 0:
-                    f.write(" No functions or classes found\n")
+                if total_classes == 0 and total_methods == 0 and total_functions == 0 and not entry['file_description']:
+                    f.write("No functions, classes, or file description found\n")
                     continue
 
                 if total_classes > 0:
@@ -308,7 +324,9 @@ def generate_project_structure(project_dir,ignore_dirs,ignore_files,extensions_t
                     f.write(f" Total Methods: {total_methods}")
                 if total_functions > 0:
                     f.write(f" Total Functions: {total_functions}")
-                if total_classes > 0 or total_methods > 0 or total_functions > 0:
+                if entry['file_description']:
+                    f.write(f"\n File Description: {entry['file_description']}")
+                if total_classes > 0 or total_methods > 0 or total_functions > 0 or total_classes == 0 and total_methods == 0 and total_functions == 0 and entry['file_description']:
                     f.write("\n")
 
                 # Write classes
@@ -333,6 +351,8 @@ def generate_project_structure(project_dir,ignore_dirs,ignore_files,extensions_t
 
     # Save combined structure and functions to combined file if requested
     if export_combined:
+        if not os.path.exists(DOCUMENTATION_DIR):
+            os.makedirs(DOCUMENTATION_DIR)
         with open(combined_file, 'w', encoding='utf-8') as f:
             f.write("Project Structure:\n")
             for line in tree:
@@ -345,7 +365,7 @@ def generate_project_structure(project_dir,ignore_dirs,ignore_files,extensions_t
                 total_methods = sum(len(cls['functions']) for cls in entry['classes'])
                 total_functions = len(entry['functions'])
 
-                if total_classes == 0 and total_methods == 0 and total_functions == 0:
+                if total_classes == 0 and total_methods == 0 and total_functions == 0 and not entry['file_description']:
                     f.write(" No functions or classes found\n")
                     continue
 
@@ -355,7 +375,9 @@ def generate_project_structure(project_dir,ignore_dirs,ignore_files,extensions_t
                     f.write(f" Total Methods: {total_methods}")
                 if total_functions > 0:
                     f.write(f" Total Functions: {total_functions}")
-                if total_classes > 0 or total_methods > 0 or total_functions > 0:
+                if entry['file_description']:
+                    f.write(f"\n  - File Description: {entry['file_description']}")
+                if total_classes > 0 or total_methods > 0 or total_functions > 0 or total_classes == 0 and total_methods == 0 and total_functions == 0 and entry['file_description']:
                     f.write("\n")
 
                 # Write classes
